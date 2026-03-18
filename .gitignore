@@ -22,3 +22,6 @@ Thumbs.db
 
 # App local config (do not commit)
 card_game/config.js
+
+# Vercel build output (generated)
+public/
