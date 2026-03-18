@@ -1,0 +1,9 @@
+{
+  "name": "my-card-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/generate-config.mjs"
+  }
+}
+

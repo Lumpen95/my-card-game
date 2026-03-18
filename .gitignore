@@ -1,0 +1,24 @@
+# Node / build artifacts
+node_modules/
+dist/
+build/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Secrets
+.env
+*.pem
+*.key
+
+# App local config (do not commit)
+card_game/config.js

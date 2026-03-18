@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>Canvas 카드 뒤집기 게임</title>
+  <style>
+    :root{
+      --bg0:#050816;
+      --bg1:#0b102a;
+      --panel: rgba(10, 14, 32, 0.62);
+      --panelBorder: rgba(148,163,184,0.22);
+      --text:#e5e7eb;
+      --muted:#94a3b8;
+      --accent:#22d3ee;
+      --accent2:#a78bfa;
+      --danger:#fb7185;
+      --ok:#34d399;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(1200px 700px at 20% 10%, rgba(34, 211, 238, 0.20), transparent 55%),
+        radial-gradient(900px 600px at 85% 25%, rgba(167, 139, 250, 0.22), transparent 55%),
+        radial-gradient(1000px 800px at 50% 100%, rgba(56, 189, 248, 0.12), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+    #game-wrapper {
+      width: min(560px, 92vw);
+    }
+    .panel {
+      padding: 18px 18px 14px;
+      border-radius: 22px;
+      background: var(--panel);
+      border: 1px solid var(--panelBorder);
+      box-shadow:
+        0 28px 70px rgba(0,0,0,0.55),
+        0 0 0 1px rgba(34,211,238,0.08) inset,
+        0 0 0 1px rgba(167,139,250,0.05);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+    }
+    .panel::before{
+      content:"";
+      position:absolute;
+      inset:-2px;
+      background:
+        linear-gradient(120deg, rgba(34,211,238,0.22), rgba(167,139,250,0.18), rgba(34,211,238,0.12));
+      opacity: 0.40;
+      filter: blur(18px);
+      pointer-events:none;
+    }
+    .panel > * { position: relative; }
+    .title {
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap: 10px;
+      margin: 0 0 12px;
+    }
+    .title h1{
+      margin:0;
+      font-size: 16px;
+      letter-spacing: 0.2px;
+    }
+    .badge {
+      font-size: 11px;
+      color: rgba(229,231,235,0.9);
+      border: 1px solid rgba(34,211,238,0.35);
+      background: rgba(2,6,23,0.35);
+      padding: 4px 10px;
+      border-radius: 999px;
+      box-shadow: 0 0 0 1px rgba(34,211,238,0.10) inset;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      background: rgba(2,6,23,0.65);
+      border-radius: 18px;
+      border: 1px solid rgba(148,163,184,0.18);
+      box-shadow:
+        0 26px 60px rgba(0,0,0,0.55),
+        0 0 0 1px rgba(34,211,238,0.07) inset;
+      cursor: pointer;
+    }
+    #info {
+      margin-top: 10px;
+      font-size: 13px;
+      color: rgba(229,231,235,0.95);
+    }
+    .row {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .left {
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .right {
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .field {
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .input {
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.30);
+      background: rgba(2,6,23,0.60);
+      color: var(--text);
+      outline: none;
+      min-width: 140px;
+    }
+    .input:focus{
+      border-color: rgba(34,211,238,0.6);
+      box-shadow: 0 0 0 3px rgba(34,211,238,0.15);
+    }
+    .btn {
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,0.30);
+      background: rgba(17,24,39,0.55);
+      color: var(--text);
+      cursor: pointer;
+      transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+      font-size: 12px;
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(34,211,238,0.45);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.35);
+      background: rgba(31,41,55,0.55);
+    }
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    .btn.primary{
+      border-color: rgba(34,211,238,0.55);
+      box-shadow: 0 0 0 1px rgba(34,211,238,0.10) inset;
+    }
+    .status {
+      font-size: 12px;
+      color: rgba(34,211,238,0.9);
+      min-height: 16px;
+    }
+    #reset-btn {
+      margin-top: 10px;
+    }
+    #reset-btn:hover {
+      background: rgba(31,41,55,0.55);
+    }
+    #leaderboard {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(148, 163, 184, 0.20);
+      text-align: left;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    #leaderboard h2 {
+      font-size: 14px;
+      margin: 0 0 8px 0;
+      color: #e5e7eb;
+      font-weight: 650;
+      letter-spacing: 0.2px;
+    }
+    #leaderboard .hint {
+      font-size: 12px;
+      color: #94a3b8;
+      margin: 0 0 10px 0;
+    }
+    #leaderboard table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      color: #e5e7eb;
+    }
+    #leaderboard th, #leaderboard td {
+      padding: 6px 6px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      vertical-align: middle;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 140px;
+    }
+    #leaderboard th {
+      text-align: left;
+      font-weight: 650;
+      color: #cbd5e1;
+    }
+    #leaderboard .muted {
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div id="game-wrapper">
+    <div class="panel">
+      <div class="title">
+        <h1>Card Flip</h1>
+        <span class="badge">Canvas + Supabase</span>
+      </div>
+
+      <canvas id="game" width="480" height="480"></canvas>
+
+      <div id="info">이름을 입력하고 [시작]을 누르세요.</div>
+
+      <div class="row">
+        <div class="left">
+          <label class="field" for="player-name">
+            이름
+            <input id="player-name" class="input" type="text" placeholder="익명" />
+          </label>
+          <button id="start-btn" class="btn primary" type="button">시작</button>
+          <div id="status" class="status"></div>
+        </div>
+        <div class="right" aria-label="게임 상태">
+          <span>시도 <strong id="moves-label" style="color:var(--text)">0</strong></span>
+          <span>시간 <strong id="time-label" style="color:var(--text)">0.0</strong>s</span>
+        </div>
+      </div>
+
+      <button id="reset-btn" class="btn" type="button">다시 시작</button>
+
+      <section id="leaderboard" aria-label="리더보드">
+        <h2>리더보드</h2>
+        <p class="hint">moves(적을수록) → 시간(짧을수록) 기준 상위 10개</p>
+        <div id="leaderboard-status" class="muted">불러오는 중…</div>
+        <div style="overflow:auto; max-height: 220px;">
+          <table aria-label="리더보드 표">
+            <thead>
+              <tr>
+                <th style="width: 34px;">#</th>
+                <th>이름</th>
+                <th style="width: 72px;">시도</th>
+                <th style="width: 84px;">시간</th>
+                <th style="width: 86px;">기록시각</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Supabase JS (v2) CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Local config (NOT committed): card_game/config.js -->
+  <script src="./config.js"></script>
+
+  <script>
+    // 캔버스 기본 설정
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const infoEl = document.getElementById("info");
+    const resetBtn = document.getElementById("reset-btn");
+    const nameInput = document.getElementById("player-name");
+    const startBtn = document.getElementById("start-btn");
+    const statusEl = document.getElementById("status");
+    const movesLabel = document.getElementById("moves-label");
+    const timeLabel = document.getElementById("time-label");
+    const leaderboardStatusEl = document.getElementById("leaderboard-status");
+    const leaderboardBodyEl = document.getElementById("leaderboard-body");
+
+    const ROWS = 4;
+    const COLS = 4;
+    const CARD_GAP = 10;
+    const CARD_RADIUS = 12;
+    const PADDING = 20;
+
+    const cardWidth  = (canvas.width  - PADDING * 2 - CARD_GAP * (COLS - 1)) / COLS;
+    const cardHeight = (canvas.height - PADDING * 2 - CARD_GAP * (ROWS - 1)) / ROWS;
+
+    // 카드 데이터 구조
+    let cards = [];
+    let flipped = [];   // 현재 뒤집힌(하지만 아직 짝 안 맞춰진) 카드 인덱스 0~2개
+    let lock = false;   // 애니메이션/비교 중 클릭 잠금
+    let matchedCount = 0;
+    let moves = 0;
+    let startTime = null;
+    let timerId = null;
+    let gameStarted = false;
+
+    // 간단한 심볼들 (짝 맞추기용)
+    const symbols = ["★","♥","◆","♣","♠","♪","☀","☂"];
+
+    // 애니메이션 설정
+    const FLIP_DURATION_MS = 220;
+    const MISMATCH_DELAY_MS = 450;
+    let rafId = null;
+
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    function requestDrawLoop() {
+      if (rafId != null) return;
+      const loop = () => {
+        const now = performance.now();
+        let any = false;
+        for (const card of cards) {
+          if (!card.anim) continue;
+          any = true;
+          const t = Math.min(1, (now - card.anim.start) / card.anim.duration);
+          const e = easeInOutCubic(t);
+          card.flip = card.anim.from + (card.anim.to - card.anim.from) * e;
+          if (t >= 1) {
+            card.flip = card.anim.to;
+            card.anim = null;
+          }
+        }
+        draw();
+        if (any) {
+          rafId = requestAnimationFrame(loop);
+        } else {
+          rafId = null;
+        }
+      };
+      rafId = requestAnimationFrame(loop);
+    }
+
+    function animateFlip(card, targetOpen) {
+      card.targetOpen = targetOpen;
+      card.anim = {
+        start: performance.now(),
+        duration: FLIP_DURATION_MS,
+        from: card.flip,
+        to: targetOpen ? 1 : 0
+      };
+      requestDrawLoop();
+    }
+
+    // Supabase 설정은 `card_game/config.js`에서 주입합니다. (레포에 커밋 금지)
+    const SUPABASE_URL = window.CARD_GAME_CONFIG?.SUPABASE_URL || "";
+    const SUPABASE_ANON_KEY = window.CARD_GAME_CONFIG?.SUPABASE_ANON_KEY || "";
+    let supabaseClient = null;
+    try {
+      if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    } catch (e) {
+      console.error("Supabase 초기화 실패", e);
+    }
+
+    function startTimer() {
+      startTime = Date.now();
+      if (timerId) clearInterval(timerId);
+      timerId = setInterval(() => {
+        if (!startTime) return;
+        const seconds = (Date.now() - startTime) / 1000;
+        timeLabel.textContent = seconds.toFixed(1);
+      }, 100);
+    }
+
+    function stopTimer() {
+      if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    }
+
+    function setStarted(started) {
+      gameStarted = started;
+      if (startBtn) startBtn.disabled = started;
+      if (nameInput) nameInput.disabled = started;
+      canvas.style.cursor = started ? "pointer" : "not-allowed";
+      if (!started) {
+        infoEl.textContent = "이름을 입력하고 [시작]을 누르세요.";
+      } else {
+        infoEl.textContent = "카드를 클릭해서 같은 문양을 맞춰 보세요!";
+      }
+    }
+
+    async function saveScoreIfPossible() {
+      if (!supabaseClient) {
+        statusEl.textContent = "Supabase 설정 필요";
+        statusEl.style.color = "#f97373";
+        return;
+      }
+      const durationMs = startTime ? Date.now() - startTime : null;
+      const playerName = nameInput.value.trim() || null;
+
+      try {
+        const { error } = await supabaseClient
+          .from("card_scores")
+          .insert([{ player_name: playerName, moves, duration_ms: durationMs }]);
+
+        if (error) {
+          console.error(error);
+          statusEl.textContent = "저장 실패";
+          statusEl.style.color = "#fecaca";
+        } else {
+          statusEl.textContent = "점수 저장됨";
+          statusEl.style.color = "#bbf7d0";
+          fetchLeaderboard();
+        }
+      } catch (e) {
+        console.error(e);
+        statusEl.textContent = "저장 에러";
+        statusEl.style.color = "#fecaca";
+      }
+    }
+
+    function formatDuration(ms) {
+      if (ms == null) return "-";
+      return `${(ms / 1000).toFixed(1)}s`;
+    }
+
+    function formatKSTTime(isoOrTs) {
+      if (!isoOrTs) return "-";
+      const d = new Date(isoOrTs);
+      if (Number.isNaN(d.getTime())) return "-";
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      return `${hh}:${mm}`;
+    }
+
+    function escapeText(s) {
+      return String(s ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll("\"", "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderLeaderboard(rows) {
+      if (!Array.isArray(rows) || rows.length === 0) {
+        leaderboardBodyEl.innerHTML = `<tr><td colspan="5" class="muted">아직 기록이 없어요.</td></tr>`;
+        return;
+      }
+
+      leaderboardBodyEl.innerHTML = rows
+        .map((r, i) => {
+          const name = r.player_name ? escapeText(r.player_name) : `<span class="muted">익명</span>`;
+          const movesText = r.moves ?? "-";
+          const timeText = formatDuration(r.duration_ms);
+          const atText = formatKSTTime(r.created_at);
+          return `<tr>
+            <td class="muted">${i + 1}</td>
+            <td title="${escapeText(r.player_name ?? "익명")}">${name}</td>
+            <td>${movesText}</td>
+            <td>${timeText}</td>
+            <td class="muted">${atText}</td>
+          </tr>`;
+        })
+        .join("");
+    }
+
+    async function fetchLeaderboard() {
+      if (!leaderboardStatusEl || !leaderboardBodyEl) return;
+
+      if (!supabaseClient) {
+        leaderboardStatusEl.textContent = "Supabase 설정 필요";
+        renderLeaderboard([]);
+        return;
+      }
+
+      leaderboardStatusEl.textContent = "불러오는 중…";
+      try {
+        // moves 오름차순, duration_ms 오름차순(짧을수록), 최신 기록 우선
+        const { data, error } = await supabaseClient
+          .from("card_scores")
+          .select("player_name,moves,duration_ms,created_at")
+          .order("moves", { ascending: true })
+          .order("duration_ms", { ascending: true, nullsFirst: false })
+          .order("created_at", { ascending: false })
+          .limit(10);
+
+        if (error) {
+          console.error(error);
+          leaderboardStatusEl.textContent = "불러오기 실패";
+          renderLeaderboard([]);
+          return;
+        }
+
+        leaderboardStatusEl.textContent = "";
+        renderLeaderboard(data);
+      } catch (e) {
+        console.error(e);
+        leaderboardStatusEl.textContent = "불러오기 에러";
+        renderLeaderboard([]);
+      }
+    }
+
+    function initGame() {
+      const pairValues = [...symbols, ...symbols]; // 8쌍 = 16장
+      shuffle(pairValues);
+      cards = [];
+      matchedCount = 0;
+      moves = 0;
+      movesLabel.textContent = "0";
+      timeLabel.textContent = "0.0";
+      statusEl.textContent = "";
+      stopTimer();
+      startTime = null;
+      flipped = [];
+      lock = false;
+      setStarted(false);
+
+      let idx = 0;
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const x = PADDING + c * (cardWidth + CARD_GAP);
+          const y = PADDING + r * (cardHeight + CARD_GAP);
+          cards.push({
+            x,
+            y,
+            value: pairValues[idx],
+            isOpen: false,
+            isMatched: false
+            ,flip: 0
+            ,targetOpen: false
+            ,anim: null
+          });
+          idx++;
+        }
+      }
+      draw();
+    }
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+    }
+
+    // 둥근 직사각형 그리기
+    function drawRoundedRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    // 전체 보드 그리기
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 배경 미세 그리드
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.strokeStyle = "rgba(148,163,184,0.18)";
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= canvas.width; x += 24) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= canvas.height; y += 24) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      for (const card of cards) {
+        const { x, y, isOpen, isMatched, value } = card;
+        const w = cardWidth;
+        const h = cardHeight;
+
+        const t = card.flip ?? (isOpen || isMatched ? 1 : 0);
+        const front = t >= 0.5;
+        const sx = Math.max(0.06, Math.abs(Math.cos(Math.PI * t))); // 1 -> 0 -> 1
+
+        ctx.save();
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        ctx.translate(cx, cy);
+        ctx.scale(sx, 1);
+        ctx.translate(-cx, -cy);
+
+        // 카드 배경
+        drawRoundedRect(x, y, w, h, CARD_RADIUS);
+        if (isMatched) {
+          const gradient = ctx.createLinearGradient(x, y, x + w, y + h);
+          gradient.addColorStop(0, "#34d399");
+          gradient.addColorStop(1, "#16a34a");
+          ctx.fillStyle = gradient;
+        } else if (front) {
+          const gradient = ctx.createLinearGradient(x, y, x + w, y + h);
+          gradient.addColorStop(0, "#22d3ee");
+          gradient.addColorStop(1, "#3b82f6");
+          ctx.fillStyle = gradient;
+        } else {
+          const gradient = ctx.createLinearGradient(x, y, x + w, y + h);
+          gradient.addColorStop(0, "rgba(2,6,23,0.9)");
+          gradient.addColorStop(1, "rgba(15,23,42,0.95)");
+          ctx.fillStyle = gradient;
+        }
+        ctx.fill();
+
+        // 테두리
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = isMatched ? "rgba(187,247,208,0.9)" : (front ? "rgba(34,211,238,0.55)" : "rgba(148,163,184,0.35)");
+        ctx.stroke();
+
+        // 카드 앞면 텍스트
+        if (front) {
+          ctx.fillStyle = "#f9fafb";
+          ctx.font = `${Math.floor(h * 0.58)}px ui-sans-serif, system-ui`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(value, x + w / 2, y + h / 2 + 2);
+        } else {
+          // 뒷면 패턴
+          const cx = x + w / 2;
+          const cy = y + h / 2;
+          ctx.strokeStyle = "rgba(148,163,184,0.75)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(cx, cy, Math.min(w, h) * 0.2, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(cx - 8, cy);
+          ctx.lineTo(cx + 8, cy);
+          ctx.moveTo(cx, cy - 8);
+          ctx.lineTo(cx, cy + 8);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    function getCardIndexAt(x, y) {
+      return cards.findIndex(card =>
+        x >= card.x &&
+        x <= card.x + cardWidth &&
+        y >= card.y &&
+        y <= card.y + cardHeight
+      );
+    }
+
+    canvas.addEventListener("click", (e) => {
+      if (!gameStarted) return;
+      if (lock) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+
+      const idx = getCardIndexAt(x, y);
+      if (idx === -1) return;
+
+      const card = cards[idx];
+      if (card.isOpen || card.isMatched || card.anim) return;
+
+      // 첫 클릭과 함께 타이머 시작을 보장(혹시 시작 버튼 후 지연 클릭 시)
+      if (!startTime) startTimer();
+
+      flipped.push(idx);
+      lock = true;
+      animateFlip(card, true);
+
+      // 애니메이션이 끝났는지 폴링해서 상태 확정 후 진행
+      const waitFlipDone = (c) => new Promise((res) => {
+        const check = () => {
+          if (!c.anim) return res();
+          requestAnimationFrame(check);
+        };
+        requestAnimationFrame(check);
+      });
+
+      (async () => {
+        await waitFlipDone(card);
+        card.isOpen = true;
+        lock = false;
+
+        if (flipped.length !== 2) return;
+        lock = true;
+        moves++;
+        movesLabel.textContent = String(moves);
+
+        const [i1, i2] = flipped;
+        const c1 = cards[i1];
+        const c2 = cards[i2];
+
+        // 두 번째 카드도 애니메이션 끝까지 기다림
+        await waitFlipDone(c2);
+        c2.isOpen = true;
+
+        if (c1.value === c2.value) {
+          c1.isMatched = true;
+          c2.isMatched = true;
+          flipped = [];
+          matchedCount += 2;
+          lock = false;
+
+          if (matchedCount === cards.length) {
+            stopTimer();
+            infoEl.textContent = `클리어! 시도 횟수: ${moves}번`;
+            saveScoreIfPossible();
+          } else {
+            infoEl.textContent = `좋아요! 시도: ${moves}번`;
+          }
+        } else {
+          infoEl.textContent = `틀렸어요. 시도: ${moves}번`;
+          await new Promise((r) => setTimeout(r, MISMATCH_DELAY_MS));
+          animateFlip(c1, false);
+          animateFlip(c2, false);
+          await Promise.all([waitFlipDone(c1), waitFlipDone(c2)]);
+          c1.isOpen = false;
+          c2.isOpen = false;
+          flipped = [];
+          lock = false;
+        }
+      })();
+    });
+
+    startBtn.addEventListener("click", () => {
+      if (gameStarted) return;
+      setStarted(true);
+      startTimer();
+      statusEl.textContent = "";
+    });
+
+    resetBtn.addEventListener("click", initGame);
+
+    initGame();
+    fetchLeaderboard();
+  </script>
+</body>
+</html>
